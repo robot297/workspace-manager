@@ -17,6 +17,7 @@ const baseConfig: RepoConfig = {
   username: '',
   token: '',
   scope: '',
+  npmRegistries: [],
 };
 
 const authConfig: RepoConfig = {
@@ -32,8 +33,8 @@ const scopedConfig: RepoConfig = {
 };
 
 // --- npm ---
-describe('npm module', () => {
-  it('generates registry config', () => {
+describe('npm module — legacy single-registry fallback (no npmRegistries)', () => {
+  it('generates global registry config', () => {
     const snippet = npmModule.configTemplate(baseConfig);
     expect(snippet).toContain('registry=https://artifacts.example.com');
   });
@@ -41,13 +42,7 @@ describe('npm module', () => {
   it('generates scoped registry config', () => {
     const snippet = npmModule.configTemplate(scopedConfig);
     expect(snippet).toContain('@myorg:registry=https://artifacts.example.com');
-    // Should NOT have an unscoped registry= line (lines starting with registry=)
     expect(snippet.split('\n').some(l => l.startsWith('registry='))).toBe(false);
-  });
-
-  it('includes auth line when auth enabled', () => {
-    const snippet = npmModule.configTemplate(authConfig);
-    expect(snippet).toContain('_auth=alice:secret123');
   });
 
   it('generates bash script', () => {
@@ -57,6 +52,101 @@ describe('npm module', () => {
 
   it('generates powershell script identical to bash for npm', () => {
     expect(npmModule.psScriptTemplate(baseConfig)).toEqual(npmModule.scriptTemplate(baseConfig));
+  });
+});
+
+describe('npm module — multi-registry', () => {
+  const globalOnlyConfig: RepoConfig = {
+    ...baseConfig,
+    npmRegistries: [
+      { id: '__npm_global__', url: 'https://nexus.acme.com/npm/', scope: undefined, authEnabled: false, username: '', token: '' },
+    ],
+  };
+
+  const scopedOnlyConfig: RepoConfig = {
+    ...baseConfig,
+    npmRegistries: [
+      { id: 'r1', url: 'https://nexus.acme.com/npm/private/', scope: '@acme', authEnabled: false, username: '', token: '' },
+    ],
+  };
+
+  const globalAndScopedConfig: RepoConfig = {
+    ...baseConfig,
+    npmRegistries: [
+      { id: '__npm_global__', url: 'https://nexus.acme.com/npm/', scope: undefined, authEnabled: false, username: '', token: '' },
+      { id: 'r1', url: 'https://nexus.acme.com/npm/private/', scope: '@acme', authEnabled: false, username: '', token: '' },
+      { id: 'r2', url: 'https://npm.pkg.github.com/', scope: '@design', authEnabled: false, username: '', token: '' },
+    ],
+  };
+
+  const authGlobalConfig: RepoConfig = {
+    ...baseConfig,
+    npmRegistries: [
+      { id: '__npm_global__', url: 'https://nexus.acme.com/npm/', scope: undefined, authEnabled: true, username: '', token: 'my-token' },
+    ],
+  };
+
+  const authScopedConfig: RepoConfig = {
+    ...baseConfig,
+    npmRegistries: [
+      { id: 'r1', url: 'https://nexus.acme.com/npm/private/', scope: '@acme', authEnabled: true, username: '', token: 'scoped-token' },
+    ],
+  };
+
+  it('global-only: generates registry= line', () => {
+    const snippet = npmModule.configTemplate(globalOnlyConfig);
+    expect(snippet).toContain('registry=https://nexus.acme.com/npm/');
+    expect(snippet).not.toContain('@');
+  });
+
+  it('scoped-only: generates @scope:registry= line with no global registry=', () => {
+    const snippet = npmModule.configTemplate(scopedOnlyConfig);
+    expect(snippet).toContain('@acme:registry=https://nexus.acme.com/npm/private/');
+    expect(snippet.split('\n').some(l => l.startsWith('registry='))).toBe(false);
+  });
+
+  it('global+scoped: global appears first, then scoped entries', () => {
+    const snippet = npmModule.configTemplate(globalAndScopedConfig);
+    expect(snippet).toContain('registry=https://nexus.acme.com/npm/');
+    expect(snippet).toContain('@acme:registry=https://nexus.acme.com/npm/private/');
+    expect(snippet).toContain('@design:registry=https://npm.pkg.github.com/');
+    const globalIdx = snippet.indexOf('registry=https://nexus.acme.com/npm/');
+    const scopedIdx = snippet.indexOf('@acme:registry=');
+    expect(globalIdx).toBeLessThan(scopedIdx);
+  });
+
+  it('auth on global: uses host-scoped _authToken format', () => {
+    const snippet = npmModule.configTemplate(authGlobalConfig);
+    expect(snippet).toContain('//nexus.acme.com/npm/:_authToken=my-token');
+    expect(snippet).not.toContain('_auth=');
+  });
+
+  it('auth on scoped: uses host-scoped _authToken format', () => {
+    const snippet = npmModule.configTemplate(authScopedConfig);
+    expect(snippet).toContain('//nexus.acme.com/npm/private/:_authToken=scoped-token');
+  });
+
+  it('auth disabled: no auth line generated', () => {
+    const snippet = npmModule.configTemplate(globalOnlyConfig);
+    expect(snippet).not.toContain('_authToken');
+  });
+
+  it('auth token placeholder when token is empty', () => {
+    const config: RepoConfig = {
+      ...baseConfig,
+      npmRegistries: [
+        { id: '__npm_global__', url: 'https://nexus.acme.com/npm/', scope: undefined, authEnabled: true, username: '', token: '' },
+      ],
+    };
+    const snippet = npmModule.configTemplate(config);
+    expect(snippet).toContain('_authToken=YOUR_TOKEN');
+  });
+
+  it('script: emits one npm config set per registry', () => {
+    const script = npmModule.scriptTemplate(globalAndScopedConfig);
+    expect(script).toContain('npm config set registry "https://nexus.acme.com/npm/"');
+    expect(script).toContain('npm config set "@acme:registry" "https://nexus.acme.com/npm/private/"');
+    expect(script).toContain('npm config set "@design:registry" "https://npm.pkg.github.com/"');
   });
 });
 

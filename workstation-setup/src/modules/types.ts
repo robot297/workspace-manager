@@ -1,5 +1,14 @@
 export type OS = 'macos' | 'linux' | 'windows';
 
+export interface NpmRegistryEntry {
+  id: string;
+  url: string;
+  scope?: string;
+  authEnabled: boolean;
+  username: string;
+  token: string;
+}
+
 export interface RepoConfig {
   repoUrl: string;
   os: OS;
@@ -8,6 +17,7 @@ export interface RepoConfig {
   username: string;
   token: string;
   scope: string;
+  npmRegistries: NpmRegistryEntry[];
 }
 
 export interface PackageManagerModule {

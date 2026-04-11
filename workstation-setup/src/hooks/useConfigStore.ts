@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { RepoConfig, OS } from '../modules/types';
+import type { RepoConfig, OS, NpmRegistryEntry } from '../modules/types';
 
 export type ConfigStore = RepoConfig;
 
@@ -11,6 +11,7 @@ const DEFAULT_CONFIG: ConfigStore = {
   username: '',
   token: '',
   scope: '',
+  npmRegistries: [],
 };
 
 function readFromUrl(): Partial<ConfigStore> {
@@ -68,5 +69,55 @@ export function useConfigStore() {
     }));
   }, []);
 
-  return { config, setConfig, toggleManager };
+  const addNpmRegistry = useCallback(() => {
+    const entry: NpmRegistryEntry = {
+      id: crypto.randomUUID(),
+      url: '',
+      scope: '',
+      authEnabled: false,
+      username: '',
+      token: '',
+    };
+    setConfigRaw(prev => ({ ...prev, npmRegistries: [...prev.npmRegistries, entry] }));
+  }, []);
+
+  const updateNpmRegistry = useCallback((id: string, update: Partial<NpmRegistryEntry>) => {
+    setConfigRaw(prev => ({
+      ...prev,
+      npmRegistries: prev.npmRegistries.map(r => r.id === id ? { ...r, ...update } : r),
+    }));
+  }, []);
+
+  const removeNpmRegistry = useCallback((id: string) => {
+    setConfigRaw(prev => ({
+      ...prev,
+      npmRegistries: prev.npmRegistries.filter(r => r.id !== id),
+    }));
+  }, []);
+
+  /** Upsert the global (no-scope) registry entry, identified by the stable GLOBAL_ID. */
+  const setNpmGlobal = useCallback((update: Partial<NpmRegistryEntry>) => {
+    const GLOBAL_ID = '__npm_global__';
+    setConfigRaw(prev => {
+      const existing = prev.npmRegistries.find(r => r.id === GLOBAL_ID);
+      if (existing) {
+        return {
+          ...prev,
+          npmRegistries: prev.npmRegistries.map(r => r.id === GLOBAL_ID ? { ...r, ...update } : r),
+        };
+      }
+      const newGlobal: NpmRegistryEntry = {
+        id: GLOBAL_ID,
+        url: '',
+        scope: undefined,
+        authEnabled: false,
+        username: '',
+        token: '',
+        ...update,
+      };
+      return { ...prev, npmRegistries: [newGlobal, ...prev.npmRegistries] };
+    });
+  }, []);
+
+  return { config, setConfig, toggleManager, addNpmRegistry, updateNpmRegistry, removeNpmRegistry, setNpmGlobal };
 }

@@ -10,6 +10,7 @@ const baseConfig: RepoConfig = {
   username: '',
   token: '',
   scope: '',
+  npmRegistries: [],
 };
 
 const authConfig: RepoConfig = {

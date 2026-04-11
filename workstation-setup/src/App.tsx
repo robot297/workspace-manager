@@ -5,6 +5,7 @@ import { OsSelector } from './components/OsSelector';
 import { RepoUrlInput } from './components/RepoUrlInput';
 import { AuthFields } from './components/AuthFields';
 import { ScopeInput } from './components/ScopeInput';
+import { NpmRegistryConfig } from './components/NpmRegistryConfig';
 import { SnippetsView } from './components/SnippetsView';
 import { InstructionStepper } from './components/InstructionStepper';
 import { ScriptExportPanel } from './components/ScriptExportPanel';
@@ -21,12 +22,14 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function App() {
-  const { config, setConfig, toggleManager } = useConfigStore();
+  const { config, setConfig, toggleManager, addNpmRegistry, updateNpmRegistry, removeNpmRegistry, setNpmGlobal } = useConfigStore();
   const [activeTab, setActiveTab] = useState<Tab>('snippets');
 
-  // Show scope input if any selected manager supports it
+  const npmSelected = config.selectedManagers.includes('npm');
+
+  // Show scope input if any non-npm selected manager supports it
   const showScope = ALL_MODULES
-    .filter(m => config.selectedManagers.includes(m.id))
+    .filter(m => config.selectedManagers.includes(m.id) && m.id !== 'npm')
     .some(m => m.supportsScope);
 
   return (
@@ -73,25 +76,49 @@ export default function App() {
 
               <hr className="border-gray-100" />
 
-              <RepoUrlInput
-                value={config.repoUrl}
-                onChange={repoUrl => setConfig({ repoUrl })}
-              />
+              {npmSelected && (
+                <>
+                  <NpmRegistryConfig
+                    npmRegistries={config.npmRegistries}
+                    onUpdate={updateNpmRegistry}
+                    onAdd={addNpmRegistry}
+                    onRemove={removeNpmRegistry}
+                    onGlobalChange={setNpmGlobal}
+                  />
+                  {config.selectedManagers.length > 1 && <hr className="border-gray-100" />}
+                </>
+              )}
 
-              <ScopeInput
-                value={config.scope}
-                onChange={scope => setConfig({ scope })}
-                visible={showScope}
-              />
+              {config.selectedManagers.filter(id => id !== 'npm').length > 0 && (
+                <>
+                  <RepoUrlInput
+                    value={config.repoUrl}
+                    onChange={repoUrl => setConfig({ repoUrl })}
+                  />
 
-              <AuthFields
-                authEnabled={config.authEnabled}
-                username={config.username}
-                token={config.token}
-                onAuthEnabledChange={authEnabled => setConfig({ authEnabled })}
-                onUsernameChange={username => setConfig({ username })}
-                onTokenChange={token => setConfig({ token })}
-              />
+                  <ScopeInput
+                    value={config.scope}
+                    onChange={scope => setConfig({ scope })}
+                    visible={showScope}
+                  />
+
+                  <AuthFields
+                    authEnabled={config.authEnabled}
+                    username={config.username}
+                    token={config.token}
+                    onAuthEnabledChange={authEnabled => setConfig({ authEnabled })}
+                    onUsernameChange={username => setConfig({ username })}
+                    onTokenChange={token => setConfig({ token })}
+                  />
+                </>
+              )}
+
+              {config.selectedManagers.length === 0 && (
+                <RepoUrlInput
+                  value={config.repoUrl}
+                  onChange={repoUrl => setConfig({ repoUrl })}
+                />
+              )}
             </div>
 
             {/* Share link hint */}
