@@ -2,25 +2,69 @@ import type { PackageManagerModule, RepoConfig } from './types';
 
 const configTemplate = (config: RepoConfig): string => {
   const url = config.repoUrl || 'https://your-nexus.example.com/repository/maven-public/';
-  const auth = config.authEnabled
+  const servers = config.authEnabled
     ? `
   <servers>
     <server>
       <id>internal-mirror</id>
-      <username>${config.username ? config.username : 'YOUR_USERNAME'}</username>
-      <password>${config.token ? config.token : 'YOUR_TOKEN'}</password>
+      <username>\${env.MAVEN_USERNAME}</username>
+      <password>\${env.MAVEN_TOKEN}</password>
+    </server>
+    <server>
+      <id>internal-repo</id>
+      <username>\${env.MAVEN_USERNAME}</username>
+      <password>\${env.MAVEN_TOKEN}</password>
     </server>
   </servers>`
     : '';
-  return `<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+  return `<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0
+                              https://maven.apache.org/xsd/settings-1.2.0.xsd">
   <mirrors>
     <mirror>
       <id>internal-mirror</id>
       <name>Internal Maven Mirror</name>
       <url>${url}</url>
-      <mirrorOf>*</mirrorOf>
+      <mirrorOf>*,!local</mirrorOf>
     </mirror>
-  </mirrors>${auth}
+  </mirrors>${servers}
+  <profiles>
+    <profile>
+      <id>internal-repo</id>
+      <repositories>
+        <repository>
+          <id>internal-repo</id>
+          <url>${url}</url>
+          <releases>
+            <enabled>true</enabled>
+            <updatePolicy>daily</updatePolicy>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+          </snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>internal-repo</id>
+          <url>${url}</url>
+          <releases>
+            <enabled>true</enabled>
+            <updatePolicy>daily</updatePolicy>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+          </snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  <activeProfiles>
+    <activeProfile>internal-repo</activeProfile>
+  </activeProfiles>
 </settings>`;
 };
 

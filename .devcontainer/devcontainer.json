@@ -22,14 +22,10 @@
 		"vscode": {
 			// Add the IDs of extensions you want to install.
 			"extensions": [
-				"ms-python.python",
-				"ms-python.vscode-pylance",
-				"MS-vsliveshare.vsliveshare",
 				"eamodio.gitlens",
 				"anthropic.claude-code",
 				"cweijan.vscode-office",
-				"ms-toolsai.jupyter",
-				"ms-toolsai.datawrangler"
+				"dbaeumer.vscode-eslint"
 			]
 		}
 	},

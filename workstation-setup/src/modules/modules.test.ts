@@ -123,13 +123,18 @@ describe('maven module', () => {
   it('generates settings.xml with mirror', () => {
     const snippet = mavenModule.configTemplate(baseConfig);
     expect(snippet).toContain('<url>https://artifacts.example.com</url>');
-    expect(snippet).toContain('<mirrorOf>*</mirrorOf>');
+    expect(snippet).toContain('<mirrorOf>*,!local</mirrorOf>');
+    expect(snippet).toContain('<activeProfile>internal-repo</activeProfile>');
+    expect(snippet).toContain('<updatePolicy>daily</updatePolicy>');
+    expect(snippet).toContain('<updatePolicy>always</updatePolicy>');
   });
 
   it('includes credentials when auth enabled', () => {
     const snippet = mavenModule.configTemplate(authConfig);
-    expect(snippet).toContain('<username>alice</username>');
-    expect(snippet).toContain('<password>secret123</password>');
+    expect(snippet).toContain('<username>${env.MAVEN_USERNAME}</username>');
+    expect(snippet).toContain('<password>${env.MAVEN_TOKEN}</password>');
+    expect(snippet).not.toContain('alice');
+    expect(snippet).not.toContain('secret123');
   });
 });
 
