@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Generate package manager configuration snippets
 The system SHALL generate valid, copy-paste-ready configuration snippets for each selected package manager based on the provided repository configuration. For npm, the system SHALL generate a complete `.npmrc` that incorporates all configured registries (one optional global and zero or more scoped entries). For all other package managers, generation remains based on a single repository URL, optional credential placeholders, and optional scope/group filter.
@@ -39,23 +39,7 @@ The system SHALL generate valid, copy-paste-ready configuration snippets for eac
 - **WHEN** a user selects Docker and provides a repository URL
 - **THEN** the system generates a `daemon.json` snippet adding the URL as an insecure or mirror registry as appropriate
 
-### Requirement: Credential placeholder injection
-The system SHALL insert clearly labeled placeholder tokens (e.g., `YOUR_USERNAME`, `YOUR_TOKEN`) into configuration snippets whenever authentication fields are non-empty, and SHALL NOT embed actual credential values into generated snippets.
-
-#### Scenario: Auth placeholders included when credentials enabled
-- **WHEN** a user enables authentication and enters a username and token
-- **THEN** the generated snippet contains `YOUR_USERNAME` and `YOUR_TOKEN` placeholders in the correct locations for that package manager's auth format
-
-#### Scenario: Credentials excluded from URL query params
-- **WHEN** a user fills in credential fields and shares or copies the page URL
-- **THEN** the URL does NOT contain the credential field values
-
-### Requirement: Live snippet preview
-The system SHALL update configuration snippets in real time as the user changes any input field, without requiring a form submission.
-
-#### Scenario: Snippet updates on input change
-- **WHEN** the user modifies the repository URL field
-- **THEN** all generated snippets update immediately to reflect the new URL
+## ADDED Requirements
 
 ### Requirement: npm auth lines scoped to registry host
 The system SHALL generate npm auth lines using the `//hostname/path/:` prefix format, scoped to the specific registry host, rather than using a global `_auth=` line.
